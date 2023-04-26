@@ -16,8 +16,8 @@ while counter < MAX_COUNTER:  # если MAX_COUNTER == 0 то бот больш
 
     print('attempt =', counter)  # Чтобы видеть в консоли, что код живет
     updates = requests.get(f'{API_URL}{BOT_TOKEN}/getUpdates?offset={offset + 1}').json()  # перенос API в JSON
-    updates2 = requests.get(f'{API_URL}{BOT_TOKEN}/getUpdates?offset={offset + 1}').json()
-    updates3 = requests.get(f'{API_URL}{BOT_TOKEN}/getUpdates?offset={offset + 1}').json()
+    updates2 = requests.get(f'{API_URL}{BOT_TOKEN}/getUpdates?offset={offset}').json()
+    updates3 = requests.get(f'{API_URL}{BOT_TOKEN}/getUpdates?offset={offset - 1}').json()
 
 
     if updates['result']:
