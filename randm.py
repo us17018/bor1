@@ -3,6 +3,8 @@ import random
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message
 from aiogram.filters import Text, Command
+from aiogram.types import (KeyboardButton, Message, ReplyKeyboardMarkup,
+                           ReplyKeyboardRemove)
 
 
 # Вместо BOT TOKEN HERE нужно вставить токен вашего бота,
@@ -12,6 +14,25 @@ BOT_TOKEN: str = '6245798122:AAG9WztsZo4Flm9pKdT2NYQk8MZQQLDCWMw'
 # Создаем объекты бота и диспетчера
 bot: Bot = Bot(BOT_TOKEN)
 dp: Dispatcher = Dispatcher()
+
+buttons: list[KeyboardButton] = []
+keyboard: list[list[KeyboardButton]] = []
+
+# Заполняем список списками с кнопками
+for i in range(1, 101):
+    buttons.append(KeyboardButton(text=str(i)))
+    if not i % 12:
+        keyboard.append(buttons)
+        buttons = []
+    if  i > 99:
+        keyboard.append(buttons)
+
+# Создаем объект клавиатуры, добавляя в него список списков с кнопками
+keyboard: ReplyKeyboardMarkup = ReplyKeyboardMarkup(
+                                        keyboard=keyboard,
+                                        resize_keyboard=True)
+
+
 
 # Количество попыток, доступных пользователю в игре
 ATTEMPTS: int = 100
@@ -44,6 +65,7 @@ async def process_start_command(message: Message):
                                        'total_games': 0,
                                        'wins': 0}
 
+
 @dp.message(Command(commands=['funny']))
 async def process_start_command(message: Message):
     await message.answer(random.choice(sp))
@@ -70,7 +92,8 @@ async def process_stat_command(message: Message):
 async def process_cancel_command(message: Message):
     if user['in_game']:
         await message.answer('Вы вышли из игры. Если захотите сыграть '
-                             'снова - напишите об этом')
+                             'снова - напишите об этом',
+                             reply_markup=ReplyKeyboardRemove())
         user['in_game'] = False
     else:
         await message.answer('А мы итак с вами не играем. '
@@ -83,7 +106,8 @@ async def process_cancel_command(message: Message):
 async def process_positive_answer(message: Message):
     if not user['in_game']:
         await message.answer('Ура!\n\nЯ загадал число от 1 до 100, '
-                             'попробуй угадать!')
+                             'попробуй угадать!',
+                             reply_markup=keyboard)
         user['in_game'] = True
         user['secret_number'] = get_random_number()
         user['attempts'] = ATTEMPTS
@@ -98,7 +122,8 @@ async def process_positive_answer(message: Message):
 async def process_negative_answer(message: Message):
     if not user['in_game']:
         await message.answer('Жаль :(\n\nЕсли захотите поиграть - просто '
-                             'напишите об этом')
+                             'напишите об этом',
+                             reply_markup=ReplyKeyboardRemove())
     else:
         await message.answer('Мы же сейчас с вами играем. Присылайте, '
                              'пожалуйста, числа от 1 до 100')
@@ -109,7 +134,8 @@ async def process_negative_answer(message: Message):
 async def process_numbers_answer(message: Message):
     if user['in_game']:
         if int(message.text) == user['secret_number']:
-            await message.answer_sticker('CAACAgIAAxkBAAIDJGRSYJjuSOKzbfZSqtBIs2pdHVsgAAILIwACNPfhSIrIZ8jHPLvwLwQ')
+            await message.answer_sticker('CAACAgIAAxkBAAIDJGRSYJjuSOKzbfZSqtBIs2pdHVsgAAILIwACNPfhSIrIZ8jHPLvwLwQ',
+                                         reply_markup=ReplyKeyboardRemove())
             user['in_game'] = False
             user['total_games'] += 1
             user['wins'] += 1
@@ -121,7 +147,8 @@ async def process_numbers_answer(message: Message):
             user['attempts'] -= 1
 
         if user['attempts'] == 0:
-            await message.answer('ты проиграл :(')
+            await message.answer('ты проиграл :(',
+                                 reply_markup=ReplyKeyboardRemove())
             await message.answer_sticker('CAACAgIAAxkBAAICnGRSXjVDpLocBKN8DS3174Lyx8QEAAKHJQACiY5BSPQT6Jq4ykxWLwQ')
             user['in_game'] = False
             user['total_games'] += 1
