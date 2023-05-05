@@ -15,27 +15,36 @@ BOT_TOKEN: str = '6245798122:AAG9WztsZo4Flm9pKdT2NYQk8MZQQLDCWMw'
 bot: Bot = Bot(BOT_TOKEN)
 dp: Dispatcher = Dispatcher()
 
+
+# Заполняем список списками с кнопками
+button_1: KeyboardButton = KeyboardButton(text='Я хочу играть!')
+button_2: KeyboardButton = KeyboardButton(text='Я не хочу играть!')
+button_3: KeyboardButton = KeyboardButton(text='Правила игры')
+button_4: KeyboardButton = KeyboardButton(text='Шутка')
+button_5: KeyboardButton = KeyboardButton(text='Cтатистика')
+# Создаем объект клавиатуры, добавляя в него список списков с кнопками
+
 buttons: list[KeyboardButton] = []
-keyboard: list[list[KeyboardButton]] = []
+my_keyboard: list[list[KeyboardButton]] = []
 
 # Заполняем список списками с кнопками
 for i in range(1, 101):
     buttons.append(KeyboardButton(text=str(i)))
-    if not i % 12:
-        keyboard.append(buttons)
+    if not i % 8:
+        my_keyboard.append(buttons)
         buttons = []
-    if  i > 99:
-        keyboard.append(buttons)
-
+    if i > 99:
+        my_keyboard.append(buttons)
 # Создаем объект клавиатуры, добавляя в него список списков с кнопками
 keyboard: ReplyKeyboardMarkup = ReplyKeyboardMarkup(
-                                        keyboard=keyboard,
-                                        resize_keyboard=True)
-
+                        keyboard=[[button_1, button_2, button_3],
+                                        [button_4,button_5]],
+                        my_keyboard=my_keyboard,
+                            resize_keyboard=True)
 
 
 # Количество попыток, доступных пользователю в игре
-ATTEMPTS: int = 100
+ATTEMPTS: int = 7
 
 # Словарь, в котором будут храниться данные пользователя
 user: dict = {'in_game': False,
@@ -49,14 +58,17 @@ user: dict = {'in_game': False,
 def get_random_number() -> int:
     return random.randint(1, 100)
 
-sp = ['У самой заботливой в мире девочки хомячок весит 22 килограмма.','Сколько раз бросал курить, но недалеко. Сигареты то лёгкие.','Карантин — как запой: выходить надо постепенно.']
+sp = ['У самой заботливой в мире девочки хомячок весит 22 килограмма.','Сколько раз бросал курить, но недалеко. Сигареты то лёгкие.','Карантин — как запой: выходить надо постепенно.',
+      'Как называют человека, который продал свою печень? Обеспеченный','-Алло, это Чешская Республика? Почешите мне спинку.',
+      'Почему среди фигуристов, не бывает цыган? Никто не верит что это их конёк.']
 
 # Этот хэндлер будет срабатывать на команду "/start"
-@dp.message(Command(commands=['start']))
+@dp.message(Command(commands=['start'],ignore_case=True))
 async def process_start_command(message: Message):
-    await message.answer('Привет!\nДавай сыграем в игру "Угадай число"?\n\n'
+    await message.answer('Привет!\nДавай сыграем в игру "Угадай число"?\n(у тебя есть 7 попыток)\n\n'                         
                          'Чтобы получить правила игры и список доступных '
-                         'команд - отправьте команду /help\n если хочешь шутку напиши /funny')
+                         'команд воспользуйтесь кнопкой - "Правила игры" \n если хотите шутку воспользуйтесь кнопкой - "Шутка"',
+                         reply_markup=keyboard)
     # проверка id пользователя
     if message.from_user.id not in user:
         user[message.from_user.id] = {'in_game': False,
@@ -66,25 +78,25 @@ async def process_start_command(message: Message):
                                        'wins': 0}
 
 
-@dp.message(Command(commands=['funny']))
+@dp.message(Text(text='Шутка'))
 async def process_start_command(message: Message):
-    await message.answer(random.choice(sp))
+    await message.answer(random.choice(sp),
+                         reply_markup=keyboard)
 
 # Этот хэндлер будет срабатывать на команду "/help"
-@dp.message(Command(commands=['help']))
+@dp.message(Text(text='Правила игры'))
 async def process_help_command(message: Message):
     await message.answer(f'Правила игры:\n\nЯ загадываю число от 1 до 100, '
                          f'а вам нужно его угадать\nУ вас есть {ATTEMPTS} '
-                         f'попыток\n\nДоступные команды:\n/help - правила '
-                         f'игры и список команд\n/cancel - выйти из игры\n'
-                         f'/stat - посмотреть статистику\n\nДавай сыграем?')
-
+                         f'попыток\n\nДоступные команды: /cancel - выйти из игры\n'
+                         f'\nДавай сыграем?')
 
 # Этот хэндлер будет срабатывать на команду "/stat"
-@dp.message(Command(commands=['stat']))
+@dp.message(Text(text='Cтатистика'))
 async def process_stat_command(message: Message):
     await message.answer(f'Всего игр сыграно: {user["total_games"]}\n'
-                         f'Игр выиграно: {user["wins"]}')
+                         f'Игр выиграно: {user["wins"]}',
+                         reply_markup=keyboard)
 
 
 # Этот хэндлер будет срабатывать на команду "/cancel"
@@ -93,7 +105,8 @@ async def process_cancel_command(message: Message):
     if user['in_game']:
         await message.answer('Вы вышли из игры. Если захотите сыграть '
                              'снова - напишите об этом',
-                             reply_markup=ReplyKeyboardRemove())
+                             reply_markup=keyboard)
+
         user['in_game'] = False
     else:
         await message.answer('А мы итак с вами не играем. '
@@ -101,13 +114,13 @@ async def process_cancel_command(message: Message):
 
 
 # Этот хэндлер будет срабатывать на согласие пользователя сыграть в игру
-@dp.message(Text(text=['Да', 'Давай', 'Сыграем', 'Игра',
-                       'Играть', 'Хочу играть','Го'], ignore_case=True))
+@dp.message(Text(text=['Я хочу играть!'], ignore_case=True))
 async def process_positive_answer(message: Message):
     if not user['in_game']:
         await message.answer('Ура!\n\nЯ загадал число от 1 до 100, '
                              'попробуй угадать!',
-                             reply_markup=keyboard)
+                             reply_markup=my_keyboard)
+
         user['in_game'] = True
         user['secret_number'] = get_random_number()
         user['attempts'] = ATTEMPTS
@@ -118,12 +131,12 @@ async def process_positive_answer(message: Message):
 
 
 # Этот хэндлер будет срабатывать на отказ пользователя сыграть в игру
-@dp.message(Text(text=['Нет', 'Не', 'Не хочу', 'Не буду'], ignore_case=True))
+@dp.message(Text(text=['Я не хочу играть!'], ignore_case=True))
 async def process_negative_answer(message: Message):
     if not user['in_game']:
         await message.answer('Жаль :(\n\nЕсли захотите поиграть - просто '
-                             'напишите об этом',
-                             reply_markup=ReplyKeyboardRemove())
+                             'напишите об этом')
+
     else:
         await message.answer('Мы же сейчас с вами играем. Присылайте, '
                              'пожалуйста, числа от 1 до 100')
@@ -134,8 +147,9 @@ async def process_negative_answer(message: Message):
 async def process_numbers_answer(message: Message):
     if user['in_game']:
         if int(message.text) == user['secret_number']:
-            await message.answer_sticker('CAACAgIAAxkBAAIDJGRSYJjuSOKzbfZSqtBIs2pdHVsgAAILIwACNPfhSIrIZ8jHPLvwLwQ',
-                                         reply_markup=ReplyKeyboardRemove())
+            await message.answer('Ты победил :), поздравляю!',
+                                 reply_markup=keyboard)
+            await message.answer_sticker('CAACAgIAAxkBAAIF4GRVCrQDd7QbJD5D46BRCEyF_LFNAAKrCgACO36wSkxaoI6szpShLwQ')
             user['in_game'] = False
             user['total_games'] += 1
             user['wins'] += 1
@@ -148,8 +162,8 @@ async def process_numbers_answer(message: Message):
 
         if user['attempts'] == 0:
             await message.answer('ты проиграл :(',
-                                 reply_markup=ReplyKeyboardRemove())
-            await message.answer_sticker('CAACAgIAAxkBAAICnGRSXjVDpLocBKN8DS3174Lyx8QEAAKHJQACiY5BSPQT6Jq4ykxWLwQ')
+                                 reply_markup=keyboard)
+            await message.answer_sticker('CAACAgIAAxkBAAIF3mRVCpmVLULaH6GeKHqGBcFC4TElAAKBDAACE5WoSmr1do5SMwOELwQ')
             user['in_game'] = False
             user['total_games'] += 1
     else:
